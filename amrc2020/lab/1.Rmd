@@ -1,0 +1,145 @@
+---
+title: "Lab 1"
+subtitle: ""
+author: "Attila Lazar"
+date: "14.10.2020"
+output: pdf_document
+---
+
+## Data
+
+```{r, echo=TRUE}
+#install.packages("ISLR")
+data(Hitters,package="ISLR")
+data <- na.omit(Hitters)
+str(data)
+```
+
+The data contains categorical variables with 2 levels. Since these are represented by numbers in R, we do not have to transfer them.
+
+then we split the data in training and test sets
+
+```{r, echo=TRUE}
+
+# separate data in train and test
+set.seed(123)
+train_i <- sample(seq_len(nrow(data)), size = floor(2/3 * nrow(data)))
+train <- data[train_i, ]
+test <- data[-train_i, ]
+
+```
+
+## 1 Full model
+
+### a)
+
+We compute the LS estimator for the training set
+
+```{r, echo=TRUE,fig.width=6,fig.height=4}
+
+y <- train$Salary
+intercept <- rep(1, nrow(train))
+x <- data.matrix(train[, !names(train) %in% c("Salary")])
+X <- cbind(intercept, x)
+thetaH <- solve(t(X) %*% X) %*% t(X) %*% y
+thetaH
+```
+
+### b)
+We use *model.matrix()* to calculate the LS estimator
+
+```{r, echo=TRUE}
+X2 <- model.matrix(Salary~., data=train)
+thetaH2 <- solve(t(X2) %*% X2) %*% t(X2) %*% y
+thetaH2
+
+```
+We get the same coeficients except for the intercept
+
+### c)
+
+We calculate the estimator using *lm()*
+
+```{r, echo=TRUE}
+lm0 <- lm(Salary~., data=train)
+summary(lm0)
+
+```
+We select all variables with p-Value less than 0.1. For our reduced model we will select the variables "Walks", "Division", "PutOuts", "Assists", "Errors"
+
+### d)
+
+```{r, echo=TRUE}
+par(mfrow=c(1,2))
+plot(train$Salary, predict(lm0, train), col='blue') 
+abline(1,1)
+plot(test$Salary, predict(lm0, test) ,col='blue') 
+abline(1,1)
+```
+We would expect the estimator to perform better on the training data but visually the results look vrey simular.
+
+### e)
+
+MSE training data
+```{r, echo=TRUE}
+mean((train$Salary - predict(lm0, train))^2)
+```
+ 
+ MSE test data
+```{r, echo=TRUE}
+mean((test$Salary - predict(lm0, test))^2)
+```
+
+As expected MSE is smaller (better) for the training data.
+
+## 2 Reduced model
+
+We compute the estimator with the training set
+
+```{r, echo=TRUE}
+x <- data.matrix(train[, names(train) %in% c("Walks", "Division", "PutOuts", "Assists", "Errors")])
+intercept <- rep(1, nrow(train))
+X <- cbind(intercept, x)
+thetaH <- solve(t(X) %*% X) %*% t(X) %*% y
+thetaH
+```
+
+### a)
+```{r, echo=TRUE}
+redmodel <- lm(Salary~Walks+Division+PutOuts+Assists+Errors+1, train)
+summary(redmodel)
+```
+All variables seems to be significant in our reduced model.
+
+### b)
+
+```{r, echo=TRUE}
+par(mfrow=c(1,2))
+
+yH <- X %*% thetaH
+plot(train$Salary, yH, col='blue')
+abline(1,1)
+
+plot(test$Salary, predict(redmodel, test), col='blue') 
+abline(1,1)
+
+```
+
+### c)
+
+```{r, echo=TRUE}
+mean((train$Salary - yH)^2)
+```
+
+```{r, echo=TRUE}
+mean((test$Salary - predict(redmodel, test))^2)
+```
+
+We would expect the MSE from the reduced Model to be smaller but in fact is bigger then using the full model. 
+
+### d
+
+```{r, echo=TRUE}
+anova(redmodel, lm0)
+```
+As expected anove selects the full model and rejects the reduced model 
