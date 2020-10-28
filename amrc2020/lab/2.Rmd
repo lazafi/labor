@@ -1,0 +1,199 @@
+---
+title: "Lab 2"
+subtitle: ""
+author: "Attila Lazar"
+date: "21.10.2020"
+output: pdf_document
+---
+
+## Data
+
+We load the data and extract the varibles y and X20-X61
+
+```{r, echo=TRUE}
+load("data/dat.RData")
+#str(d)
+data <- d[, names(d) %in% c('y', paste0('X', 20:65))]
+hist(data$y)
+set.seed(123)
+n <- nrow(data)
+train <- sample(1:n, round(n*2/3))
+test <- (1:n) [-train]
+```
+
+The Histogram of the respose variable 'y' looks normally distributed
+
+## 1. Full model
+
+```{r, echo=TRUE}
+#full_formula <- as.formula(paste('y~', paste(paste0('X', 20:65), collapse="+")))
+model1 <- lm(y~., data, subset=train) 
+summary (model1)
+
+```
+The summar of the model reveals NA values probably becouse variables are not lin. independent. We use alias to determine these variables
+
+
+```{r, echo=TRUE}
+alias(model1,  partial = FALSE)
+
+```
+We drop X61 from our model
+
+```{r, echo=TRUE}
+model2 <- update(model1, .~.-X61)
+summary(model2)
+
+```
+There are no NA values any more
+
+```{r, echo=TRUE}
+alias(model2,  partial = FALSE)
+
+```
+
+```{r, echo=TRUE}
+par(mfrow=c(1,2))
+
+plot(data[train, 'y'], predict(model2, data[train,]), xlab='y' ,ylab='y-hat', main='train')
+abline(c(0,1))
+plot(data[test, 'y'], predict(model2, data[test,]), xlab='y' ,ylab='y-hat', main='test')
+abline(c(0,1))
+
+```
+
+According to the plots the predictions look promising. The MSE is as expected much bigger for the test data.
+
+```{r, echo=TRUE}
+#mse_train
+mean((data[train, 'y'] - predict(model2, data[train,]))^2)
+#mse_test
+mean((data[test, 'y'] - predict(model2, data[test,]))^2)
+
+```
+
+
+## 2. Stepwise regression
+
+We train a model using 'forward', 'backward' and 'both' options. for the 'forward' model we use the formula from model2 as scope.
+
+```{r, results = FALSE}
+
+reducedf1 <-as.formula(paste('y~', paste(paste0('X', setdiff(20:65, 61)), collapse="+")))
+
+model3 <- step(lm(y~1,data, train), scope=reducedf1, direction='forward')
+model4 <- step(lm(reducedf1, data, train), direction='backward')
+model5 <- step(lm(reducedf1, data, train))
+
+```
+
+```{r, echo=TRUE}
+summary(model3)
+```
+
+```{r, echo=TRUE}
+summary(model4)
+```
+
+```{r, echo=TRUE}
+summary(model5)
+```
+
+model4 (with backward selection) and model5 (with 'both') are the same. model 4 has smaller Adjusted RS
+
+```{r, echo=TRUE}
+anova(model3, model4)
+```
+
+Anova select the second model, however we achive better MSE on the Test data with our first model
+
+```{r, echo=TRUE}
+#plot(data[train, 'y'], predict(model3, data[train, ]), xlab='y' ,ylab='y-hat')
+#abline(c(0,1))
+plot(data[test, 'y'], predict(model3, data[test, ]), xlab='y' ,ylab='y-hat')
+abline(c(0,1))
+#mse_train
+mean((data[train, 'y'] - predict(model3, data[train,]))^2)
+#mse_test
+mean((data[test, 'y'] - predict(model3, data[test,]))^2)
+
+```
+
+
+```{r, echo=TRUE}
+plot(data[test, 'y'], predict(model4, data[test, ]), xlab='y' ,ylab='y-hat')
+abline(c(0,1))
+#mse_train
+mean((data[train, 'y'] - predict(model4, data[train,]))^2)
+#mse_test
+mean((data[test, 'y'] - predict(model4, data[test,]))^2)
+
+```
+## 3. Best subset regression
+
+
+```{r, echo=TRUE}
+library(leaps)
+model.rs <- regsubsets(reducedf1, data=data, subset=train, really.big=TRUE, nvmax=10)
+summary(model.rs)
+```
+
+
+```{r, echo=TRUE}
+s <- summary(model.rs)
+str(s)
+```
+
+We plot the BIC of the models
+
+```{r, echo=TRUE}
+plot(1:10, s$bic, xlab='Nr of variables', ylab='BIC')
+```
+
+The bigest model with 10 regressors has the best BIC Value, but is not much better than the model with 6 regressors. We train this models and look at the MSE values
+
+first with 10 regressors
+
+```{r, echo=TRUE}
+bestformula10 <- paste0("y~", paste(setdiff(names(which(s$which[10,])), '(Intercept)'), collapse = '+'))
+bestformula10
+```
+
+```{r, echo=TRUE}
+model.best10 <- lm(bestformula10, data, train)
+summary(model.best10)
+```
+
+
+```{r, echo=TRUE}
+plot(data[test, 'y'], predict(model.best10, data[test, ]), xlab='y' ,ylab='y-hat')
+abline(c(0,1))
+#mse_test
+mean((data[test, 'y'] - predict(model.best10, data[test,]))^2)
+```
+The MSE Value is slightly worse then in our model with stepwise selection. On the other hand is this model much smaller (10 vs 24 variables).
+
+
+then we look at the model with 6 regressors
+
+```{r, echo=TRUE}
+bestformula6 <- paste0("y~", paste(setdiff(names(which(s$which[6,])), '(Intercept)'), collapse = '+'))
+bestformula6
+```
+
+```{r, echo=TRUE}
+model.best6 <- lm(bestformula6, data, train)
+summary(model.best6)
+```
+
+```{r, echo=TRUE}
+plot(data[test, 'y'], predict(model.best6, data[test, ]), xlab='y' ,ylab='y-hat')
+abline(c(0,1))
+#mse_test
+mean((data[test, 'y'] - predict(model.best6, data[test,]))^2)
+```
+
+This model predicts test data with the best MSE performance by far.  with only 6 regressors
+
+
+
