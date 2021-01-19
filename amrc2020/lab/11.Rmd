@@ -1,0 +1,155 @@
+---
+title: "Lab 11"
+subtitle: ""
+author: "Attila Lazar"
+date: "13.01.2021"
+output: pdf_document
+---
+
+# a)
+
+We read the data file and create a train and test dataset. we then train a tree on the train data.
+
+```{r, echo=TRUE}
+data <- read.csv2("data/winequality-red.csv", na.strings="", dec=".", skipNul=TRUE)
+str(data)
+
+set.seed(1234)
+n <- nrow(data)
+train <- sample(1:n, round(n*2/3))
+test <- (1:n) [-train]
+
+#install.packages("rpart")
+library(rpart)
+
+t0 <- rpart(quality~., data, subset=train)
+```
+
+# b)
+
+The structure of the trained tree. Alcohol seems to bee the most important variable. 
+
+```{r, echo=TRUE}
+plot(t0, uniform=TRUE, branch=1, compress=TRUE)
+text(t0, use.n = TRUE, cex=0.5)
+
+```
+
+# c)
+
+We compute the RMSE on the test data
+
+```{r, echo=TRUE}
+sqrt(mean((data[test, 'quality'] - predict(t0, data[test,]))^2))
+
+```
+
+# d)
+
+
+```{r, echo=TRUE}
+printcp(t0)
+
+```
+
+```{r, echo=TRUE}
+plotcp(t0)
+
+```
+As shown in the above plot, cp = 0.026 is the optimal value for cp.
+
+# e)
+
+We use the obtained cp for pruning our tree.
+
+```{r, echo=TRUE}
+t1 <- prune(t0, 0.026)
+plot(t1, branch=1, compress=TRUE)
+text(t1, use.n = TRUE, cex=0.5)
+
+```
+The pruned tree is much simpler, only the variables *alcohol* and *sulphates* are used. 
+
+# f)
+
+we calculate the RMSE for the pruned model. The RMSE is slightli worse than for the unpruned tree.
+
+```{r, echo=TRUE}
+sqrt(mean((data[test, 'quality'] - predict(t1, data[test,]))^2))
+
+```
+
+# g)
+
+We use bagging to train 100 trees. For each tree we predict the test set and calculate the average prediction for each datapoint. We then canculate the RMSE usig the averaged predictions. We get our best results yet.
+
+```{r, echo=TRUE}
+B <- 100
+for (k in seq(1,B)) {
+  tr <- sample(train, nrow(data), replace=TRUE)
+  tree <- rpart(quality~., data, subset=tr)
+
+  pred <- predict(tree, data[test,])
+  if (! exists("pred_avg")) {
+    pred_avg <- pred
+  }
+  pred_avg <- (pred + k*pred_avg) / (k+1)
+}
+
+sqrt(mean((data[test, 'quality'] - pred_avg )^2))
+```
+
+# h)
+
+Here we calculate the MSE from OOB data instead from the test data. 
+
+```{r, echo=TRUE}
+
+# function to merge arrays and calculate moving average
+mergeavg <- function(src, new) {
+  for (i in names(new)) {
+    if (is.na(src[i,'v'])) {
+      src[i, 'v'] <- new[i]
+      src[i,'n'] <- 1
+    } else {
+      src[i, 'v'] <- (new[i] + src[i, 'n'] * src[i, 'v']) / (src[i, 'n'] + 1)
+      src[i, 'n'] <- src[i, 'n'] + 1
+    }
+  }
+  src
+}
+
+
+B <- 100
+
+pred_avg <- array(numeric(0),dim=c(nrow(data), 2))
+allidx <- seq(1,nrow(data))
+dimnames(pred_avg) <- list(allidx, c('n','v'))
+
+for (k in seq(1,B)) {
+  tr <- sample(train, nrow(data), replace=TRUE)
+  oob <- data[-tr,]
+  tree <- rpart(quality~., data, subset=tr)
+  
+  pred <- predict(tree, oob)
+  pred_avg <- mergeavg(pred_avg, pred)
+}
+
+mse_oob <- sum((data$quality - pred_avg[, 'v'])^2)/nrow(data)
+mse_oob
+
+```
+
+# i)
+
+we train random forest and evaluate the results. We can expect even better results since this algorithm restricts the choice of variables for each spit in the trees randomly, thus results in more diverse trees in the forest.
+
+```{r, echo=TRUE}
+#install.packages("randomForest")
+
+library(randomForest)
+rf <- randomForest(quality~., data=data, subset=train, importance=TRUE)
+pred <- predict(rf,data[test,])
+sqrt(mean((data[test, 'quality'] -  pred)^2))
+
+```

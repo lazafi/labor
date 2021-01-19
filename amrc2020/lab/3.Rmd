@@ -32,8 +32,8 @@ full_formula <- as.formula(paste('y~', paste(xnames, collapse="+")))
 model1 <- lm(full_formula, data, subset=train) 
 ```
 
+For calculating the trimmed MSE we use the following function. The funcion trimms only the high values of the given vector, thus is more suitable for calculating trimmed MSEs than the "mean" function.
 
-For calculating the trimmed MSE we use the following function
 ```{r, echo=TRUE}
 rtmean <- function(x,trim = 0) {
   x <- sort(x)
@@ -43,32 +43,35 @@ rtmean <- function(x,trim = 0) {
 ```
 
 MSE train
+
 ```{r, echo=TRUE}
 rtmean((data[train, 'y'] - predict(model1, data[train,]))^2)
 ```
 
 MSE train right-trimmed by 10%
+
 ```{r, echo=TRUE}
 rtmean((data[train, 'y'] - predict(model1, data[train,]))^2, trim=0.1)
 ```
 
 
 MSE test
+
 ```{r, echo=TRUE}
 rtmean((data[test, 'y'] - predict(model1, data[test,]))^2)
 ```
 
-
 MSE test right-trimmed by 10%
+
 ```{r, echo=TRUE}
 rtmean((data[test, 'y'] - predict(model1, data[test,]))^2, trim=0.1)
 ```
 
-Since the trimmed mean leaves out the worst errors the trimmed MSE is much better then the untrimmed. MSE values are also always worse for the test-set.
+Since the trimmed mean leaves out the worst errors the trimmed MSE is much better then the untrimmed. MSE values are also always worse when calculated with the test-set.
 
 ## b)
 
-We plot the calculated MSEs in one parallel boxplot
+We plot the calculated MSEs in one parallel boxplot. We also add one more box to the plot for the "leave-one-out" calculation.
 
 ```{r, echo=TRUE}
 
@@ -87,6 +90,7 @@ loo <- cvFit(lm, formula=full_formula, data=data, y=data$y, type="leave-one-out"
 boxplot(mses[1,], mses[2,], mses[3,], mses[4,], mses[5,], mses[6,], loo$cv, names=c("2","5","10","20","50","100","n"), xlab="K-Fold", ylab="MSE", main="MSEs for CV with 50 Repetitions")
 
 ```
+
 The median MSE is decreasing till k=20, after that it becomes more cosistent between repetitions. This is because of smaller test samples from which the MSE is calculated. Leave-one-out (K=n) CV yields simmular MSE then 20 Fold CV.
 
 ## c)
@@ -106,10 +110,12 @@ loo <- cvFit(lm, formula=full_formula, data=data, y=data$y, type="leave-one-out"
 boxplot(mses[1,], mses[2,], mses[3,], mses[4,], mses[5,], mses[6,], loo$cv, names=c("2","5","10","20","50","100","n"), xlab="K-Fold", ylab="MSE", main="10% trimmed MSEs for CV with 50 Repetitions ")
 
 ```
+
 The trimmed MSEs are much smaller. Since we trimmed the MSE values there are also no outliers.
 
 ## d)
 
+For bootrapping and calculating MSEs, we use the following function
 
 ```{r, echo=TRUE}
 bootsrapf <- function(formula, d, n=1000, trim=0) {
@@ -132,24 +138,30 @@ bootsrapf <- function(formula, d, n=1000, trim=0) {
 
 ```
 
+We bootrap 1000 data-sets and plot the resulting MSEs on the bootrapped and left-out observations
+
 ```{r, echo=TRUE}
 bs <- bootsrapf(full_formula, data)
-boxplot(bs$mse_train, bs$mse_test, names=c("bootstraped", "left-out"), xlab="Data-sets", ylab="MSE", main="MSEs with Bootstrap")
+boxplot(bs$mse_train, bs$mse_test, names=c("bootstrapped", "left-out"), xlab="Data-sets", ylab="MSE", main="MSEs with Bootstrap")
 
 ```
-The MSE values have a big variance with maximum values reaching to 20. In order to compare MSE values, here is the plot without outliers.
+
+The MSE values have a big variance with maximum values reaching to 20. In order to compare MSE values, we plot them again without outliers.
 
 ```{r, echo=TRUE}
-boxplot(bs$mse_train, bs$mse_test, names=c("bootstraped", "left-out"), outline=FALSE, xlab="Data-sets", ylab="MSE", main="MSEs with Bootstrap (without outliers)")
+boxplot(bs$mse_train, bs$mse_test, names=c("bootstrapped", "left-out"), outline=FALSE, xlab="Data-sets", ylab="MSE", main="MSEs with Bootstrap (without outliers)")
 
 ```
+
+The median MSE is much smaller for the bootsrapped data-set, becouse this is our training dataset. MSE of the left-out samples is more representative of the loss.
+
 The median MSE for the left-out samples is under 1.0 which is much more than the median MSE calculated By CV with K=10 around 0.5 . This is because the bootrapped trainin-set contains some values multiple times which gives this samples more weight. 
 
 Also there is a big difference between the MSE calculated from bootstrapped and left-out samples.
 
 ## e)
 
-for the 10% trimmed MSE we use the "rtmean" function from ex 1a, which only trimms the upper side of the vector. 
+For the 10% trimmed MSE we use the "rtmean" function from ex 1a, which only trimms the upper side of the vector. 
 
 ```{r, echo=TRUE}
 bs2 <- bootsrapf(full_formula, data, trim=0.1)
@@ -190,6 +202,7 @@ cv2 <- cvFit(lm, formula=best_subset_reg, data=data, y=Y, K=5, R=50, cost=tmspe,
 boxplot(cv1$reps[,1], cv2$reps[,1], names=c("stepwise", "best_subset_reg"), xlab="Model", ylab="MSE", main="Comparison of MSEs using 5-Fold CV")
 
 ```
+
 Compared to the trimmed MSEs calculated using 10-Fold CV, this models are slightly better but much smaller. Our smallest model "best_subset_reg" performs best. Because it contains fewer variables it is less prone to overfitting.
 
 ```{r, echo=TRUE}
@@ -199,5 +212,6 @@ bs2 <- bootsrapf(best_subset_reg, data, trim=0.1)
 boxplot(bs1$mse_test, bs2$mse_test, names=c("stepwise", "best_subset_reg"), xlab="Model", ylab="MSE", main="Comparison of MSEs using 5-Fold CV")
 
 ```
+
 Using bootrap method for MSE calculation yields simular MSEs for both models with the smaller model beeing slightly better.
 

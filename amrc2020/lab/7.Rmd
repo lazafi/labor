@@ -1,0 +1,160 @@
+---
+title: "Lab 7"
+subtitle: ""
+author: "Attila Lazar"
+date: "18.11.2020"
+output: pdf_document
+---
+
+# 1)
+
+## data
+
+We load the dataset
+
+```{r, echo=TRUE}
+
+#install.packages("rrcov")
+data(olitos, package="rrcov")
+
+set.seed(1234)
+n <- nrow(olitos)
+train <- sample(1:n, round(n*2/3))
+test <- (1:n) [-train]
+
+```
+
+## a)
+
+We train *lda* with the train dataset and calculate the test set error
+
+```{r, echo=TRUE}
+library(MASS)
+model1 <- lda(grp~., data=olitos, subset=train)
+pred1 <- predict(model1, olitos[test,])
+T <- table(olitos[test,'grp'], pred1$class)
+e1 <- 1-sum(diag(T))/sum(T)
+e1
+
+```
+
+and compare with the error rate obtained with CV
+
+```{r, echo=TRUE}
+model1.cv <- lda(grp~., data=olitos, subset=train, CV=TRUE)
+T <- table(olitos[train,'grp'], model1.cv$class)
+e1.cv <- 1-sum(diag(T))/sum(T)
+e1.cv
+
+```
+
+# b)
+
+We use *qda* for the same task
+
+```{r, echo=TRUE}
+
+#model2 <- qda(grp~., data=olitos, subset=train)
+
+```
+
+```{r, echo=TRUE}
+
+```
+
+## c)
+
+We use *RDA*
+
+```{r, echo=TRUE}
+
+library(klaR)
+
+model3 <- rda(grp~., data=olitos, subset=train)
+model3$regularization
+
+```
+
+The *gamma* and *lambda* parameters show that the used covariance structure is simular to a common covariance matrixt like in *lda*
+
+
+We compute the error rate on the test-set
+
+```{r, echo=TRUE}
+pred3 <- predict(model3, olitos[test,])
+T <- table(olitos[test,'grp'], pred3$class)
+e3 <- 1-sum(diag(T))/sum(T)
+e3
+
+```
+
+and the train set with CV
+
+```{r, echo=TRUE}
+model3.cv <- lda(grp~., data=olitos, subset=train, CV=TRUE)
+T <- table(olitos[train,'grp'], model3.cv$class)
+e3.cv <- 1-sum(diag(T))/sum(T)
+e3.cv
+
+```
+
+# 2)
+
+We load the bank dataset
+
+```{r, echo=TRUE}
+bank <- read.csv2("data/bank.csv")
+
+```
+
+# a)
+
+We select 3000 observations as our training set for *lda*
+
+```{r, echo=TRUE}
+set.seed(1234)
+train <- sample(1:nrow(bank), 3000)
+test <- (1:nrow(bank)) [-train]
+
+model2.1 <- lda(y~., data=bank, subset=train)
+model2.1$prior
+
+```
+
+With *lda* we calculated the priori probabilities of the two classes. We can see that the "no" class has a much bigger probablity 
+
+```{r, echo=TRUE}
+pred2.1 <- predict(model2.1, bank[test,])
+T <- table(bank[test,'y'], pred2.1$class)
+T
+```
+We see the effect of higher probability of the "no" class on the confusion table: much more samples are predicted with "no" than "yes". We compute the missclassification Rate:
+
+```{r, echo=TRUE}
+
+e4 <- 1-sum(diag(T))/sum(T)
+e4
+
+```
+
+
+# b)
+
+We can move the decision boundary by specifying prior probabilities for *lda*. If we ie provide a much smaller probability for "no" = 0.2, there will be much more "yes" predictions.
+
+```{r, echo=TRUE}
+f <- 0.2
+model2.2 <- lda(y~., data=bank, subset=train, prior=c(f, 1-f))
+pred2.2 <- predict(model2.2, bank[test,])
+T <- table(bank[test,'y'], pred2.2$class)
+T
+
+```
+
+This way we get much worse error rate.
+
+```{r, echo=TRUE}
+e5 <- 1-sum(diag(T))/sum(T)
+e5
+
+```

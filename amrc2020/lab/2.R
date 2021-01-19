@@ -92,9 +92,9 @@ s <- summary(model.rs)
 
 str(s)
 
-plot(1:10, s$bic)
+plot(1:length(s$bic), s$bic)
 
-bestformula <- paste0("y~", paste(setdiff(names(which(s$which[6,])), '(Intercept)'), collapse = '+'))
+bestformula <- paste0("y~", paste(setdiff(names(which(s$which[18,])), '(Intercept)'), collapse = '+'))
 
 model.best <- lm(bestformula, data, train)
 summary(model.best)

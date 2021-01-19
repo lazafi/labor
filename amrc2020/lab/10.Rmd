@@ -1,0 +1,191 @@
+---
+title: "Lab 10"
+subtitle: ""
+author: "Attila Lazar"
+date: "09.12.2020"
+output: pdf_document
+---
+
+## data
+
+We load the dataset, and define a train and a test set. 
+
+```{r, echo=TRUE}
+
+data(Auto, package="ISLR")
+
+set.seed(123)
+n <- nrow(Auto)
+train <- sample(1:n, round(n*2/3))
+test <- (1:n) [-train]
+str(Auto)
+
+```
+
+# 1)
+
+We train a linear model using *lm* and *natural cubic splines*. Since cylinders and origin are categorical variables, they enter the model linearly.
+
+```{r, echo=TRUE}
+library(splines)
+model1 <- lm(mpg~ns(displacement, 4) + ns(horsepower, 4) + ns(acceleration, 4) + ns(weight, 4) + origin + ns(year,4) + cylinders, data=Auto, subset=train)
+```
+
+# a)
+
+we interpret the model using *summary*
+
+significantly contributig variables are *horsepower*, *year*, *weight* and 'acceleration
+
+```{r, echo=TRUE}
+summary(model1)
+```
+
+We see on the validation plot that the model predicts the test data quite well
+
+```{r, echo=TRUE}
+pred1 <- predict(model1, Auto[test,])
+plot(Auto[test,'mpg'], pred1, xlab='y' ,ylab='y-hat', main="validation")
+abline(c(0,1))
+
+```
+
+with RMSE of
+
+```{r, echo=TRUE}
+sqrt(mean((Auto[test, 'mpg'] - predict(model1, Auto[test,]))^2))
+```
+
+
+# b)
+
+Now we use stepwise reduction of the model.
+
+```{r, echo=TRUE}
+model2 <- step(lm(mpg~ns(displacement, 4) + ns(horsepower, 4) + ns(acceleration, 4) + ns(weight, 4) + origin + ns(year,4) + cylinders, Auto, train), direction='both',trace=0)
+summary(model2)
+```
+
+This eliminates the variable *displacement* and gives us a slightly better RMSE
+
+```{r, echo=TRUE}
+sqrt(mean((Auto[test, 'mpg'] - predict(model2, Auto[test,]))^2))
+
+```
+
+# c)
+
+The model consists of the Intercept, the coefficients for each spline, and a coefficient for linearly modeled variables.
+
+```{r, echo=TRUE}
+model2$coefficients
+```
+
+We plot the calculated value of the splines in the model against the original variable
+
+```{r, echo=TRUE}
+par(mfrow=c(2,2))
+plot(Auto$horsepower[train], model2$model$`ns(horsepower, 4)` %*% model2$coefficients[2:5], xlab='horsepower', ylab='ns(horsepower)')
+plot(Auto$acceleration[train], model2$model$`ns(acceleration, 4)` %*% model2$coefficients[6:9], xlab='acceleration', ylab='ns(acceleration)')
+plot(Auto$weight[train], model2$model$`ns(weight, 4)` %*% model2$coefficients[10:13], xlab='weight', ylab='ns(weight)')
+plot(Auto$year[train], model2$model$`ns(year, 4)` %*% model2$coefficients[15:18], xlab='year', ylab='ns(year)')
+
+```
+
+In these plots we see how the variable enters the model. For *horsepower* and *weight* we see a near linear, negative trend which is expected.
+
+Interestingly *acceleration* over 20 positively affects *mpg* reversing the trend. This may be becouse there are only few datapoints which may affect the model
+
+Lastly *year* affects *mpg* negatively until 73, after that *year* strongly increases *mpg*. This may be attributed to the 1973 oil crisis.
+
+# 2)
+
+# a)
+
+We use *gam* to compute *Generalized Additive Models*. As in Ex1, we do not construct splines for *origin* and *cylinders*, since these are categorical variables. 
+
+```{r, echo=TRUE}
+library(mgcv)
+model3 <- gam(mpg~s(displacement) + s(horsepower) + s(acceleration) + s(weight) + origin + s(year) + cylinders, data=Auto, subset=train,  family = gaussian)
+```
+
+
+# b)
+
+```{r, echo=TRUE}
+summary(model3)
+
+```
+
+We see that the model attributes no significance to *displacement* and only little significance to *acceleration*
+
+Also we see that the smooth function for *displacement* is near linear with edf = 1.3. In constrast it is quite complex for *year* with edf = 8.5 .
+
+# c)
+
+We plot the smmoth functions. We can see how the variable enters the model and how it affects the predicted variable.
+
+The smooth function for *year* seems to be to complex which might lead to overfitting.
+
+```{r, echo=TRUE}
+plot(model3, page=1,shade=TRUE,shade.col = "yellow")
+
+```
+
+# d)
+
+```{r, echo=TRUE}
+
+sqrt(mean((Auto[test, 'mpg'] - predict(model3, Auto[test,]))^2))
+```
+
+# e)
+
+first we try to enchance our model by manually restricting the choice of k value for *year*. We see a good improvement of the RMSE and also the complexity of the smooth function is reduced.
+
+```{r, echo=TRUE}
+model5 <- gam(mpg~s(displacement) + s(horsepower) + s(acceleration) + s(weight) + origin + s(year, k=3) + cylinders, data=Auto, subset=train, family = gaussian)
+#plot(model5, page=1,shade=TRUE,shade.col = "yellow")
+summary(model5)
+sqrt(mean((Auto[test, 'mpg'] - predict(model5, Auto[test,]))^2))
+```
+
+Next we try the option bs=ts. This results in simular model than our ouriginal smooth model.
+
+```{r, echo=TRUE}
+model7 <- gam(mpg~s(displacement,bs='ts') + s(horsepower,bs='ts') + s(acceleration,bs='ts') + s(weight,bs='ts') + origin + s(year,bs='ts') + cylinders, data=Auto, subset=train, family = gaussian)
+#plot(model7, page=1,shade=TRUE,shade.col = "yellow")
+summary(model7)
+sqrt(mean((Auto[test, 'mpg'] - predict(model7, Auto[test,]))^2))
+
+```
+
+We also try the option bs='cr'. The smooth function complexities are reduced slightly and we improve the RMSE
+
+```{r, echo=TRUE}
+model8 <- gam(mpg~s(displacement,bs='cr') + s(horsepower,bs='cr') + s(acceleration,bs='cr') + s(weight,bs='cr') + origin + s(year,bs='cr') + cylinders, data=Auto, subset=train, family = gaussian, method='REML')
+#plot(model8, page=1,shade=TRUE,shade.col = "yellow")
+summary(model8)
+sqrt(mean((Auto[test, 'mpg'] - predict(model8, Auto[test,]))^2))
+```
+
+Now set the option select = TRUE. We arrive at our best RMSE.
+
+```{r, echo=TRUE}
+model9 <- gam(mpg~s(displacement,bs='cr') + s(horsepower,bs='cr') + s(acceleration,bs='cr') + s(weight,bs='cr') + origin + s(year,bs='cr') + cylinders, data=Auto, subset=train, family = gaussian, select = TRUE, method='REML')
+#plot(model9, page=1,shade=TRUE,shade.col = "yellow")
+summary(model9)
+sqrt(mean((Auto[test, 'mpg'] - predict(model9, Auto[test,]))^2))
+```
+
+We plot the smooth functions.
+
+```{r, echo=TRUE}
+plot(model9, page=1,shade=TRUE,shade.col = "yellow")
+```
+
+```{r, echo=TRUE}
+plot(Auto[test,'mpg'], predict(model9, Auto[test,]), xlab='y' ,ylab='y-hat', main="validation")
+abline(c(0,1))
+
+```

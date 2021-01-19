@@ -30,7 +30,7 @@ rtmean((data[test, 'y'] - predict(model1, data[test,]))^2, trim=0.1)
 
 library(cvTools)
 
-?cvFit
+#?cvFit
 
 Y <- data[,'y']
 str(Y)
@@ -38,8 +38,9 @@ str(Y)
 mses <- matrix(ncol=50, nrow=6)
 i <- 1
 for (k in c(2,5,10,20,50,100)) {
-  #print(k)
+  print(k)
   ret <- cvFit(lm, formula=full_formula, data=data, y=Y, K=k, R=50, cost=mspe, seed = 123)
+  print(ret$cv)
   vals <- ret$reps
   print(length(vals))
   mses[i,] <- vals
@@ -57,14 +58,14 @@ mses <- matrix(ncol=50, nrow=6)
 i <- 1
 for (k in c(2,5,10,20,50,100)) {
   print(k)
-  ret <- cvFit(lm, formula=full_formula, data=data, y=data$y, K=k, R=50, cost=tmspe, costArgs = list(trim = 0.1))
+  ret <- cvFit(lm, formula=full_formula, data=data, y=data$y, K=k, R=50, cost=tmspe, costArgs = list(trim = 0.1), seed=123)
   vals <- ret$reps
   mses[i,] <- vals
   #str(ret)
   i <- i + 1
 }
 
-loo <- cvFit(lm, formula=full_formula, data=data, y=Y, type="leave-one-out", K=n, cost=mspe, costArgs = list(trim = 0.1))
+loo <- cvFit(lm, formula=full_formula, data=data, y=data$y, type="leave-one-out", K=n, cost=tmspe, costArgs = list(trim = 0.1))
 boxplot(mses[1,], mses[2,], mses[3,], mses[4,], mses[5,], mses[6,], loo$cv, names=c("2","5","10","20","50","100","n"))
 
 ## 1d)
