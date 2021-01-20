@@ -21,7 +21,7 @@ evalu <- function(rf) {
 
 # 1)
 
-install.packages("randomForest")
+#install.packages("randomForest")
 library(randomForest)
 #?randomForest
 
@@ -42,18 +42,34 @@ y_idx <-train[bank[train,'y'] == "yes"]
 n_idx <- sample(train[bank[train,'y'] == "no"], length(y_idx))
 evalu(randomForest(y~., data=bank, subset=c(y_idx, n_idx)))
 
-
 # b)
 
 ?randomForest
 
-evalu(randomForest(y~., data=bank, subset=train, sampsize=10))
-evalu(randomForest(y~., data=bank, subset=train, sampsize=100))
-evalu(randomForest(y~., data=bank, subset=train, sampsize=200))
-evalu(randomForest(y~., data=bank, subset=train, sampsize=300))
-evalu(randomForest(y~., data=bank, subset=train, sampsize=400))
+evaluplot <- function(rf, param, title) {
+  
+  d <- data.frame()
+  for (i in param) {
+    rf <- randomForest(y~., data=bank, subset=train, sampsize=i)
+    pred <- predict(rf, bank[test,])
+    TAB <- table(bank[test,'y'], pred)
+    error <- 1 - sum(diag(TAB)) / sum(TAB)
+  #  print(error)
+    ye <- TAB[1,2] / (TAB[1,1] + TAB[1,2])  
+    ne <- TAB[2,1] / (TAB[2,1] + TAB[2,2])  
+    n <- data.frame(
+      idx <- i,
+      y <- ye,
+      e <- error
+    )
+    d <- rbind(d,n)
+  }
+  
+  plot(d[,1], d[,3], type='l', ylim=c(0, 0.2), main=title, col='blue')
+  lines(d[,1], d[,2], col='black')
+  legend("topright", legend=c('yse', 'mse'), col=c('black', 'blue'), pch = "-")
 
-evalu(randomForest(y~., data=bank, subset=train, sampsize=1000))
+}
 
 # c)
 
@@ -76,7 +92,7 @@ evalu(randomForest(y~., data=bank, subset=train, strata=job ))
 
 # f)
 
-#install.packages("DMwR")
+install.packages("DMwR")
 library(DMwR)
 
 stm <- SMOTE(y~., bank[train,])

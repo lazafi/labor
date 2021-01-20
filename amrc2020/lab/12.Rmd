@@ -1,0 +1,202 @@
+---
+  title: "Lab 12"
+subtitle: ""
+author: "Attila Lazar"
+date: "20.01.2020"
+output: pdf_document
+---
+  
+# data
+
+```{r, echo=TRUE}
+bank <- read.csv2("data/bank.csv", stringsAsFactors = TRUE)
+str(bank)
+
+set.seed(1234)
+train <- sample(1:nrow(bank), nrow(bank)*2/3)
+test <- (1:nrow(bank)) [-train]
+
+```
+
+# 1)
+
+We calculate classification errors for each class to get a baseline performance.
+
+```{r, echo=TRUE}
+evalu(randomForest(y~., data=bank, subset=c(y_idx, n_idx)))
+
+```
+
+We plot the classification errors 
+
+```{r, echo=TRUE}
+rf1 <- randomForest(y~., data=bank, subset=train, ntree=200, importance=TRUE)
+plot(rf1, log='y')
+```
+The plot displays the error rates for the classifier. The red line shows the overall error rate. It drops rapidly but then stagnates at about 100 trees. there is little improvement by selecting more trees in the forest.
+
+```{r, echo=TRUE}
+varImpPlot(rf1)
+```
+This plot shows the variables sorted by importance measured by accuracy and gini measures. *Duration* and *month* are most important by both measures.
+
+
+
+# 2)
+
+## a)
+
+Our Train sample is quite unbalanced.
+
+```{r, echo=TRUE}
+table(bank[train, 'y'])
+```
+To address this we sample the same amount of *no* classes than *yes* classes
+
+```{r, echo=TRUE}
+y_idx <-train[bank[train,'y'] == "yes"]
+n_idx <- sample(train[bank[train,'y'] == "no"], length(y_idx))
+
+table(bank[c(y_idx, n_idx), 'y'])
+
+```
+We evaluate our new model with the test dataset. We see no improvement.
+
+```{r, echo=TRUE}
+evalu(randomForest(y~., data=bank, subset=c(y_idx, n_idx)))
+```
+
+## b)
+
+Next we use the *sampsize* parameter to improve the results
+
+We try *sampsize* from 10 to 300
+
+```{r, echo=TRUE}
+  
+  d <- data.frame()
+  for (i in seq(2,10)) {
+    rf <- randomForest(y~., data=bank, subset=train, sampsize=c(i,1))
+    pred <- predict(rf, bank[test,])
+    TAB <- table(bank[test,'y'], pred)
+    error <- 1 - sum(diag(TAB)) / sum(TAB)
+  #  print(error)
+    ye <- TAB[1,2] / (TAB[1,1] + TAB[1,2])  
+    ne <- TAB[2,1] / (TAB[2,1] + TAB[2,2])  
+    n <- data.frame(
+      idx <- i,
+      y <- ye,
+      e <- error
+    )
+    d <- rbind(d,n)
+  }
+  
+plot(d[,1], d[,3], type='l', ylim=c(0, 0.2), main="title", col='blue')
+#plot(d[,1], d[,3], type='l', main="title", col='blue')
+lines(d[,1], d[,2], col='black')
+legend("topright", legend=c('y error', 'overall error'), col=c('blue', 'black'), pch = "-")
+
+```
+
+*sampsize* control the sample drawn from the dataset. We set both values to the number of *yes* samples.
+
+```{r, echo=TRUE}
+    evalu(randomForest(y~., data=bank, subset=train, sampsize=c(length(y_idx),length(y_idx))))
+```
+We got improved the overall error rate but worsen or *yes* error rate.
+
+We try to set *sampsize* to address to imbalance.
+
+```{r, echo=TRUE}
+    evalu(randomForest(y~., data=bank, subset=train, sampsize=c(10,30)))
+```
+We can decrease the error for class *yes* significantly but also increase the overall error.
+
+
+## c)
+
+The *classwt* gives weights to classes.
+
+```{r, echo=TRUE}
+evalu(randomForest(y~., data=bank, subset=train, classwt=c(0.8, 0.1)))
+
+```
+## d)
+
+The *cutoff* parameter influences the voing process. we again give more weight to the *yes* class.
+
+```{r, echo=TRUE}
+n <- length(train[bank[train,'y'] == "no"])
+y <-  length(train[bank[train,'y'] == "yes"])
+
+evalu(randomForest(y~., data=bank, subset=train, cutoff=c(3/y,1/n) ))
+
+```
+Again we decreased the error for class *yes* significantly at the cost of the overall error.
+
+
+## e)
+
+setting *strata* enables stratified sampling
+
+```{r, echo=TRUE}
+evalu(randomForest(y~., data=bank, subset=train, strata=bank[train, 'y'] ))
+```
+setting *strata* dows not improve the *yes* error rate
+
+## f)
+
+```{r, echo=TRUE}
+library(DMwR)
+
+stm <- SMOTE(y~., bank[train,])
+stm <- SMOTE(y~., bank[train,], perc.over = 300)
+table(stm$y)
+
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
+```{r, echo=TRUE}
+```
+
