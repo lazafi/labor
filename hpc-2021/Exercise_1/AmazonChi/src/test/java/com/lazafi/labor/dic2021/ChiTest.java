@@ -1,7 +1,7 @@
 package com.lazafi.labor.dic2021;
 
 import com.lazafi.labor.dic2021.ex1.achi.AmazonChiDriver;
-import com.lazafi.labor.dic2021.ex1.achi.CategoryChiReducer;
+import com.lazafi.labor.dic2021.ex1.achi.old.CategoryChiReducer;
 import com.lazafi.labor.dic2021.ex1.achi.model.TokenChiTuple;
 import com.lazafi.labor.dic2021.ex1.achi.old.CategoryTokenizerMapper;
 import com.lazafi.labor.dic2021.ex1.achi.model.WordCountTuple;
@@ -81,17 +81,17 @@ public class ChiTest {
         conf.set("fs.defaultFS", "file:///");
         conf.set("mapreduce.framework.name", "local");
         conf.setInt("mapreduce.task.io.sort.mb", 1);
-        conf.set("stopwordfile.path", "src/resources/stopwords.txt");
+        conf.set("staging1.path", "target/tmp");
+        //conf.set("stopwordfile.path", "src/resources/stopwords.txt");
         Path input = new Path("input");
-        Path output = new Path("target/output");
-        Path tmp = new Path("target/tmp");
-//        Path stopwords = new Path("src/resources/stopwords.txt");
+        Path staging = new Path("target/o");
+        Path output = new Path("target/out");
+        Path stopwords = new Path("src/resources/stopwords.txt");
         FileSystem fs = FileSystem.getLocal(conf);
-        fs.delete(output, true); // delete old output
-        fs.delete(tmp, true);
+        fs.delete(staging, true); // delete old output
         AmazonChiDriver driver = new AmazonChiDriver();
         driver.setConf(conf);
-        int exitCode = driver.run(new String[]{input.toString(), output.toString(), tmp.toString()});
+        int exitCode = driver.run(new String[]{input.toString(), staging.toString(), output.toString(), stopwords.toString()});
     }
 
 

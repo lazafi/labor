@@ -1,4 +1,4 @@
-package com.lazafi.labor.dic2021;
+package com.lazafi.labor.dic2021.ex1.achi.model;
 
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;

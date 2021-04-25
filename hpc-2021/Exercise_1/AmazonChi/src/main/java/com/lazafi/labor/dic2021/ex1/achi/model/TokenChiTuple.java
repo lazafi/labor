@@ -72,6 +72,11 @@ public class TokenChiTuple implements WritableComparable<TokenChiTuple> {
 
     @Override
     public int compareTo(TokenChiTuple other) {
-        return chi2.compareTo(other.getChi2());
+        int v = this.token.compareTo(other.getToken());
+        if (v == 0) {
+            v = this.chi2.compareTo(other.getChi2());
+        }
+        return v*(-1);
     }
+
 }

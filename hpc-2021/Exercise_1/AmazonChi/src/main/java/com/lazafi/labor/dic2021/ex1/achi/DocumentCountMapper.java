@@ -19,6 +19,7 @@ public class DocumentCountMapper extends Mapper<Object, Text, Text, LongWritable
     private Text outkey = new Text();
     JSONParser jsonParser = new JSONParser(JSONParser.MODE_JSON_SIMPLE);
 
+    @Override
     public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
         try {
             JSONObject review = (JSONObject) jsonParser.parse(value.toString());

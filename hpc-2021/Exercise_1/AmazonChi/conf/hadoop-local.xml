@@ -8,8 +8,8 @@
         <name>mapreduce.framework.name</name>
         <value>local</value>
     </property>
-    <property>
+  <!--> <property>
         <name>stopwordfile.path</name>
         <value>src/resources/stopwords.txt</value>
-    </property>
+    </property> -->
 </configuration>

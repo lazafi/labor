@@ -14,7 +14,8 @@ import java.util.Map;
 
 public class DocumentCountReducer extends Reducer<Text, LongWritable, Text, LongWritable> {
 
-     public void reduce(Text key, Iterable<LongWritable> values, Context context) throws IOException, InterruptedException {
+    @Override
+    public void reduce(Text key, Iterable<LongWritable> values, Context context) throws IOException, InterruptedException {
 
          int sum = 0;
          for (LongWritable val : values) {

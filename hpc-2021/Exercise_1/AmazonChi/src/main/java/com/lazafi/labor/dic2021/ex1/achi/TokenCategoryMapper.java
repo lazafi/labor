@@ -13,14 +13,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class TokenCategoryMapper extends Mapper<Object, Text, Text, Text> {
     private static final Logger log = Logger.getLogger("TokenCategoryMapper");
+    private final static String DELIMITERS = " \t0123456789.!?,;:()[]{}-_\"'`~#&*%$\\/";
 
     // token
     private Text outkey = new Text();
@@ -30,6 +28,7 @@ public class TokenCategoryMapper extends Mapper<Object, Text, Text, Text> {
     JSONParser jsonParser = new JSONParser(JSONParser.MODE_JSON_SIMPLE);
     FileSystem fs;
     List stopwords = new ArrayList();
+
 
     @Override
     protected void setup(Context context) {
@@ -71,11 +70,15 @@ public void map(Object key, Text value, Context context
             JSONObject review = (JSONObject) jsonParser.parse(value.toString());
 
             String text = review.getAsString("reviewText");
+            String category = review.getAsString("category");
             if (text != null) {
-                String[] strArray = text.split("[0-9\\s\\.\\!\\?\\,\\;\\:\\(\\)\\[\\]{}\\-_\"'`~#&*%$\\/\\\\]+");
+                StringTokenizer st = new StringTokenizer(text, DELIMITERS);
+                //String[] strArray = text.split("[0-9\\s\\.\\!\\?\\,\\;\\:\\(\\)\\[\\]{}\\-_\"'`~#&*%$\\/\\\\]+");
                 Set<String> words = new HashSet<String>();
-                for (String w : strArray) {
-                    String token = w.toLowerCase();
+                while (st.hasMoreTokens()) {
+                    // lowercase
+                    String token = st.nextToken().toLowerCase();
+                    // filter stopwords and tokens <= 1
                     if (
                             !stopwords.contains(token)
                             && !words.contains(token)
@@ -83,7 +86,7 @@ public void map(Object key, Text value, Context context
                     ) {
                         words.add(token);
                         outkey.set(token);
-                        outval.set(review.getAsString("category"));
+                        outval.set(category);
                         context.write(outkey, outval);
                     }
 
